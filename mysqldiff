@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+
+$DB_SOURCE = {
+  'host' => '',
+  'user' => '',
+  'pass' => '',
+  'db'   => ''
+}
+
+$DB_DEST = {
+  'host' => '',
+  'user' => '',
+  'pass' => '',
+  'db'   => ''
+}
+
+$DUMP_OPTS = '--skip-opt --xml'
+
+#source config, database name, table name, output path
+def dump(source, db, table, where, path)
+  puts "Dumping #{source['host']}..."
+  if not where.nil? and where != '' then
+    where = '--where=\'' + where + "'"
+  else
+    where = ''
+  end
+  puts "Selecting #{where}"
+  `mysqldump -u #{source['user']} -p#{source['pass']} -h #{source['host']} #{$DUMP_OPTS} #{db} #{table} #{where} > ./tmp/#{path}.xml`
+end
+
+def faux_dump(source, db, table, where='', filename)
+  puts "Dumping #{source['host']}..."
+  if not where.nil? and where != '' then
+    where = 'WHERE ' + where
+  else
+    where = ''
+  end
+  puts "Selecting #{where}"
+
+  cmd="mysql -u #{source['user']} -p#{source['pass']} -h #{source['host']} #{db} -e 'SELECT * FROM #{table} #{where}' > ./tmp/#{filename}.tsv"
+  `#{cmd}`
+end
+
+def select(source, db, statement)
+  cmd="mysql -u #{source['user']} -p#{source['pass']} -h #{source['host']} #{db} -e '#{statement}'" +
+      "| tr '\r' '\n'" +
+      "| sed -e 's/\\\\n//g' > ./tmp/#{source['host']}.txt"
+  `#{cmd}`
+end
+
+def diff(lhs, rhs)
+  cmd="diff -u #{lhs} #{rhs} |vim -R -"
+  system("#{cmd}")
+end
+
+def compare(source, dest, query)
+  select source, source['db'], query
+  select dest, dest['db'], query
+  diff "./tmp/#{$DB_SOURCE['host']}.txt", "./tmp/#{$DB_DEST['host']}.txt"
+end
+
+if ARGV.empty? then
+  puts 'I need a query'
+  exit 1
+else
+  query = ARGV[0]
+  puts query
+  compare $DB_SOURCE, $DB_DEST, query
+end
