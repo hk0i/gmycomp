@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'trollop'
+
 ## Example config, copy to ~/.gmy-comp/config.rb
 $DB_SOURCE = {
   'host' => '',
@@ -17,6 +19,14 @@ $DB_DEST = {
 
 $PATH_TMP = '/tmp'
 ###################################################
+
+opts = Trollop::options do
+  opt :config_file, "Use specific configuration file", :type => String
+  opt :query, "Query to execute", :short => '-e', :type => String, :required => true
+end
+
+Trollop::die :config_file, \
+  "file must exist" unless File.exist?(opts[:config_file]) if opts[:config_file]
 
 $CONFIG_FILE = File.expand_path('~/.gmy-comp/config.rb')
 if File.exists?($CONFIG_FILE) then
@@ -45,11 +55,4 @@ def compare(source, dest, query)
   diff "#{$PATH_TMP}/#{$DB_SOURCE['host']}.txt", "#{$PATH_TMP}/#{$DB_DEST['host']}.txt"
 end
 
-if ARGV.empty? then
-  puts 'I need a query'
-  exit 1
-else
-  query = ARGV[0]
-  puts query
-  compare $DB_SOURCE, $DB_DEST, query
-end
+compare $DB_SOURCE, $DB_DEST, opts[:query]
