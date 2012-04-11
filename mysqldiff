@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+## Example config, copy to ~/.gmy-comp/config.rb
 $DB_SOURCE = {
   'host' => '',
   'user' => '',
@@ -14,38 +15,23 @@ $DB_DEST = {
   'db'   => ''
 }
 
-$DUMP_OPTS = '--skip-opt --xml'
+$PATH_TMP = '/tmp'
+###################################################
 
-#source config, database name, table name, output path
-def dump(source, db, table, where, path)
-  puts "Dumping #{source['host']}..."
-  if not where.nil? and where != '' then
-    where = '--where=\'' + where + "'"
-  else
-    where = ''
-  end
-  puts "Selecting #{where}"
-  `mysqldump -u #{source['user']} -p#{source['pass']} -h #{source['host']} #{$DUMP_OPTS} #{db} #{table} #{where} > ./tmp/#{path}.xml`
-end
-
-def faux_dump(source, db, table, where='', filename)
-  puts "Dumping #{source['host']}..."
-  if not where.nil? and where != '' then
-    where = 'WHERE ' + where
-  else
-    where = ''
-  end
-  puts "Selecting #{where}"
-
-  cmd="mysql -u #{source['user']} -p#{source['pass']} -h #{source['host']} #{db} -e 'SELECT * FROM #{table} #{where}' > ./tmp/#{filename}.tsv"
-  `#{cmd}`
+$CONFIG_FILE = File.expand_path('~/.gmy-comp/config.rb')
+if File.exists?($CONFIG_FILE) then
+  require $CONFIG_FILE
+else
+  puts 'Warning: no configuration file found'
+  exit 2
 end
 
 def select(source, db, statement)
   cmd="mysql -u #{source['user']} -p#{source['pass']} -h #{source['host']} #{db} -e '#{statement}'" +
       "| tr '\r' '\n'" +
-      "| sed -e 's/\\\\n//g' > ./tmp/#{source['host']}.txt"
+      "| sed -e 's/\\\\n//g' > #{$PATH_TMP}/#{source['host']}.txt"
   `#{cmd}`
+  #TODO: check return codes
 end
 
 def diff(lhs, rhs)
@@ -56,7 +42,7 @@ end
 def compare(source, dest, query)
   select source, source['db'], query
   select dest, dest['db'], query
-  diff "./tmp/#{$DB_SOURCE['host']}.txt", "./tmp/#{$DB_DEST['host']}.txt"
+  diff "#{$PATH_TMP}/#{$DB_SOURCE['host']}.txt", "#{$PATH_TMP}/#{$DB_DEST['host']}.txt"
 end
 
 if ARGV.empty? then
