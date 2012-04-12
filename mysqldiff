@@ -3,6 +3,7 @@
 require 'trollop'
 
 ## Example config, copy to ~/.gmy-comp/config.rb
+#TODO: automate file creation ;p
 $DB_SOURCE = {
   'host' => '',
   'user' => '',
